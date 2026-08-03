@@ -21,8 +21,8 @@ export default function Home() {
       try {
         const res = await fetch('/api/lapangan');
         if (!res.ok) throw new Error('Gagal memuat data lapangan');
-        const data = await res.json();
-        setLapangan(data);
+        const json = await res.json();
+        setLapangan(json.data || []);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -87,13 +87,13 @@ export default function Home() {
               lapangan.map((lap, i) => (
                 <div key={lap.id} className="glass-card p-6 group hover:-translate-y-2 transition-all duration-300" style={{ animationDelay: `${i * 100}ms` }}>
                   <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">
-                    {lap.jenis === 'Futsal' ? '⚽' : '🏸'}
+                    {lap.jenis === 'futsal' ? '⚽' : '🏸'}
                   </div>
                   <h3 className="text-2xl font-bold font-heading mb-2">{lap.nama}</h3>
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-slate-400 text-sm">{lap.jenis}</span>
-                    <span className={`badge ${lap.status === 'Tersedia' ? 'badge-confirmed' : 'badge-cancelled'}`}>
-                      {lap.status}
+                    <span className={`badge ${lap.status === 'aktif' ? 'badge-confirmed' : 'badge-cancelled'}`}>
+                      {lap.status === 'aktif' ? 'Tersedia' : 'Nonaktif'}
                     </span>
                   </div>
                   <div className="text-xl font-bold text-emerald-400 mb-6">

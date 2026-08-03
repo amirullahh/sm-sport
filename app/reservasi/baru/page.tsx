@@ -54,16 +54,18 @@ export default function BookingBaruPage() {
     try {
       const response = await fetch('/api/lapangan');
       if (response.ok) {
-        const data = await response.json();
-        setLapanganList(data);
+        const json = await response.json();
+        const rows = json.data || [];
+        // Map DB fields to component interface
+        const mapped = rows.map((r: any) => ({
+          id: String(r.id),
+          nama: r.nama,
+          tipe: r.jenis,
+          hargaPerJam: r.harga_per_jam,
+        }));
+        setLapanganList(mapped);
       } else {
-        // Mockup data
-        setLapanganList([
-          { id: 'LAP-001', nama: 'Lapangan Futsal A (Vinyl)', tipe: 'Futsal', hargaPerJam: 150000 },
-          { id: 'LAP-002', nama: 'Lapangan Futsal B (Sintetis)', tipe: 'Futsal', hargaPerJam: 120000 },
-          { id: 'LAP-003', nama: 'Lapangan Badminton 1', tipe: 'Badminton', hargaPerJam: 50000 },
-          { id: 'LAP-004', nama: 'Lapangan Basket Outdoor', tipe: 'Basket', hargaPerJam: 200000 },
-        ]);
+        setLapanganList([]);
       }
     } catch (err) {
       console.error(err);
@@ -78,24 +80,22 @@ export default function BookingBaruPage() {
     setSelectedEndTime(null);
     try {
       const response = await fetch(`/api/lapangan/${lapanganId}/jadwal?tanggal=${tanggal}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTimeSlots(data);
-      } else {
-        // Generate mockup 08:00 - 23:00
-        const slots: TimeSlot[] = [];
-        for (let i = 8; i <= 22; i++) {
-          const timeString = `${i.toString().padStart(2, '0')}:00`;
-          // Randomly book some slots for mockup
-          const isBooked = Math.random() > 0.7;
-          slots.push({ time: timeString, isBooked });
-        }
-        setTimeout(() => {
-          setTimeSlots(slots);
-          setIsLoadingJadwal(false);
-        }, 500);
-        return;
+      const json = response.ok ? await response.json() : { data: [] };
+      const bookedSlots = json.data || [];
+
+      // Build time grid 08:00 - 22:00 and mark booked slots
+      const slots: TimeSlot[] = [];
+      for (let i = 8; i <= 22; i++) {
+        const timeString = `${i.toString().padStart(2, '0')}:00`;
+        // Check if this hour falls within any booked reservation
+        const isBooked = bookedSlots.some((r: any) => {
+          const startH = parseInt(r.jam_mulai.split(':')[0]);
+          const endH = parseInt(r.jam_selesai.split(':')[0]);
+          return i >= startH && i < endH;
+        });
+        slots.push({ time: timeString, isBooked });
       }
+      setTimeSlots(slots);
     } catch (err) {
       console.error(err);
     }
@@ -186,29 +186,27 @@ export default function BookingBaruPage() {
     setIsLoading(true);
     setError(null);
     try {
+      const endHour = (parseInt(selectedEndTime!.split(':')[0]) + 1).toString().padStart(2, '0');
       const response = await fetch('/api/reservasi', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lapanganId: selectedLapangan?.id,
+          lapangan_id: Number(selectedLapangan?.id),
           tanggal: selectedDate,
-          waktuMulai: selectedStartTime,
-          waktuSelesai: `${(parseInt(selectedEndTime!.split(':')[0]) + 1).toString().padStart(2, '0')}:00`, // Add 1 hour to end time for exclusive end
+          jam_mulai: selectedStartTime,
+          jam_selesai: `${endHour}:00`,
         })
       });
 
       if (response.ok) {
         router.push('/reservasi');
       } else {
-        // Simulasi sukses untuk mockup
-        setTimeout(() => {
-          router.push('/reservasi');
-        }, 1500);
+        const json = await response.json();
+        setError(json.error || 'Gagal membuat reservasi');
+        setIsLoading(false);
       }
     } catch (err) {
-      setError("Gagal membuat reservasi. Silakan coba lagi.");
+      setError('Gagal membuat reservasi. Silakan coba lagi.');
       setIsLoading(false);
     }
   };
@@ -291,15 +289,15 @@ export default function BookingBaruPage() {
                     <div className="flex justify-between items-start mb-4">
                       <div className={`w-14 h-14 rounded-xl flex items-center justify-center 
                         ${selectedLapangan?.id === lapangan.id ? 'bg-primary text-white' : 'bg-surface/80 text-primary'}`}>
-                        {lapangan.tipe === 'Futsal' && (
+                        {lapangan.tipe === 'futsal' && (
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         )}
-                        {lapangan.tipe === 'Badminton' && (
+                        {lapangan.tipe === 'badminton' && (
                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 5.5A4.5 4.5 0 0 0 14.5 1h-5A4.5 4.5 0 0 0 5 5.5v5A4.5 4.5 0 0 0 9.5 15h5a4.5 4.5 0 0 0 4.5-4.5v-5Z"/><path d="m10 15 2 7 2-7"/><path d="M8 10h8"/></svg>
                         )}
-                        {lapangan.tipe === 'Basket' && (
+                        {lapangan.tipe === 'basket' && (
                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20"/><path d="M2 12h20"/><path d="M12 2a14.5 14.5 0 0 1 0 20"/></svg>
                         )}
                       </div>
