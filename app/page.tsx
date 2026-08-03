@@ -99,7 +99,7 @@ export default function Home() {
                   <div className="text-xl font-bold text-emerald-400 mb-6">
                     Rp {lap.harga_per_jam.toLocaleString('id-ID')}<span className="text-sm font-normal text-slate-400"> / jam</span>
                   </div>
-                  <Link href="/jadwal" className="block text-center btn-secondary w-full">Cek Ketersediaan</Link>
+                  <Link href="/login" className="block text-center btn-secondary w-full">Cek Ketersediaan</Link>
                 </div>
               ))
             ) : (
