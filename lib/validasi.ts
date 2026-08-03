@@ -70,29 +70,32 @@ interface CekBentrokParams {
 /**
  * Mengecek apakah ada reservasi yang bentrok di lapangan & tanggal yang sama.
  * 
- * BUG: Fungsi ini HANYA mengecek jam_mulai yang PERSIS SAMA,
- * TIDAK mengecek overlap range waktu.
- * Akibatnya, reservasi 09:30-10:30 bisa lolos meskipun sudah ada
- * reservasi 09:00-10:00 di lapangan & tanggal yang sama.
+ * FIX: Menggunakan formula overlap yang BENAR:
+ * Dua rentang waktu [A_start, A_end] dan [B_start, B_end] OVERLAP jika:
+ *   A_start < B_end AND A_end > B_start
+ * 
+ * Sebelumnya (BUG): hanya cek exact-match jam_mulai (=),
+ * sehingga reservasi yang overlap sebagian lolos validasi.
  * 
  * @param p - Parameter berisi lapangan_id, tanggal, jam_mulai, jam_selesai
  * @returns true jika ADA bentrok, false jika TIDAK ada bentrok
  */
 export function cekBentrok(p: CekBentrokParams): boolean {
-  // BUG: cuma cek jam_mulai yang PERSIS SAMA, gak cek overlap range
   const query = `
     SELECT COUNT(*) as jumlah
     FROM reservasi
     WHERE lapangan_id = ?
       AND tanggal = ?
       AND status IN ('pending','confirmed')
-      AND jam_mulai = ?
+      AND jam_mulai < ?
+      AND jam_selesai > ?
       ${p.reservasi_id_exclude ? 'AND id != ?' : ''}
   `;
   const params: (string | number)[] = [
     p.lapangan_id,
     p.tanggal,
-    p.jam_mulai,  // BUG: hanya exact-match jam_mulai
+    p.jam_selesai,  // jam_mulai_existing < jam_selesai_baru
+    p.jam_mulai,    // jam_selesai_existing > jam_mulai_baru
   ];
   if (p.reservasi_id_exclude) params.push(p.reservasi_id_exclude);
 
