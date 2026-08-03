@@ -14,7 +14,12 @@ import { getCurrentUser } from '@/lib/auth';
  */
 export async function GET() {
   try {
-    const lapangan = db.prepare('SELECT * FROM lapangan WHERE status = ?').all('aktif');
+    // Admin sees all, public sees only aktif
+    const user = await getCurrentUser();
+    const isAdmin = user?.role === 'admin';
+    const lapangan = isAdmin
+      ? db.prepare('SELECT id, nama, jenis, harga_per_jam, status, created_at FROM lapangan').all()
+      : db.prepare('SELECT id, nama, jenis, harga_per_jam, status, created_at FROM lapangan WHERE status = ?').all('aktif');
     return NextResponse.json({ data: lapangan }, { status: 200 });
   } catch (error) {
     console.error('Error get lapangan:', error);

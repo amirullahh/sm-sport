@@ -78,6 +78,12 @@ export async function setAuthCookie(token: string): Promise<void> {
 export async function clearAuthCookie(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
+  // Also clear the client-side UI state cookie
+  cookieStore.set('sm-sport-logged-in', '', {
+    httpOnly: false,
+    maxAge: 0,
+    path: '/',
+  });
 }
 
 /**

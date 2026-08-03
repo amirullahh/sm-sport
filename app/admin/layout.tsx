@@ -1,10 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ReactNode, useState } from 'react';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Dont show sidebar on login page
   if (pathname === '/admin/login') {
@@ -18,6 +20,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     { href: '/admin/pelanggan', label: 'Pelanggan', icon: '👥' },
     { href: '/admin/laporan', label: 'Laporan', icon: '📈' },
   ];
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      // Clear client-side cookie
+      document.cookie = 'sm-sport-logged-in=; path=/; max-age=0';
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-[#0F172A] text-[#F8FAFC]">
@@ -42,13 +58,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="mt-auto">
-          <Link
-            href="/admin/login"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-200 font-medium"
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#EF4444] hover:bg-[#EF4444]/10 transition-all duration-200 font-medium disabled:opacity-50"
           >
             <span>🚪</span>
-            <span>Logout</span>
-          </Link>
+            <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+          </button>
         </div>
       </aside>
       
