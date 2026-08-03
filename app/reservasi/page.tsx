@@ -35,54 +35,33 @@ export default function RiwayatReservasiPage() {
   const fetchReservasi = async () => {
     setIsLoading(true);
     try {
-      // Simulasi fetch API (Ganti dengan endpoint API yang sebenarnya)
       const response = await fetch('/api/reservasi');
       if (response.ok) {
-        const data = await response.json();
-        setReservasiList(data);
+        const json = await response.json();
+        const rows = json.data || [];
+        // Map DB column names to component interface
+        const mapped = rows.map((r: any) => ({
+          id: String(r.id),
+          lapanganId: String(r.lapangan_id),
+          namaLapangan: r.lapangan_nama || 'Lapangan',
+          tanggal: r.tanggal,
+          waktuMulai: r.jam_mulai,
+          waktuSelesai: r.jam_selesai,
+          durasi: (() => {
+            const [sh, sm] = (r.jam_mulai || '0:0').split(':').map(Number);
+            const [eh, em] = (r.jam_selesai || '0:0').split(':').map(Number);
+            return (eh + em / 60) - (sh + sm / 60);
+          })(),
+          totalHarga: r.total_harga || 0,
+          status: r.status,
+        }));
+        setReservasiList(mapped);
       } else {
-        // Fallback mockup data jika API belum ada
-        setTimeout(() => {
-          setReservasiList([
-            {
-              id: 'RES-001',
-              lapanganId: 'LAP-001',
-              namaLapangan: 'Lapangan Futsal A',
-              tanggal: '2026-08-05',
-              waktuMulai: '15:00',
-              waktuSelesai: '17:00',
-              durasi: 2,
-              totalHarga: 150000,
-              status: 'confirmed'
-            },
-            {
-              id: 'RES-002',
-              lapanganId: 'LAP-002',
-              namaLapangan: 'Lapangan Badminton B',
-              tanggal: '2026-08-06',
-              waktuMulai: '19:00',
-              waktuSelesai: '21:00',
-              durasi: 2,
-              totalHarga: 100000,
-              status: 'pending'
-            },
-            {
-              id: 'RES-003',
-              lapanganId: 'LAP-001',
-              namaLapangan: 'Lapangan Futsal A',
-              tanggal: '2026-08-01',
-              waktuMulai: '10:00',
-              waktuSelesai: '11:00',
-              durasi: 1,
-              totalHarga: 75000,
-              status: 'completed'
-            }
-          ]);
-          setIsLoading(false);
-        }, 1000);
+        setReservasiList([]);
       }
     } catch (error) {
       console.error('Error fetching reservasi:', error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -92,15 +71,17 @@ export default function RiwayatReservasiPage() {
     
     setIsCancelling(true);
     try {
-      // Simulasi panggilan API untuk membatalkan
-      const response = await fetch(`/api/reservasi/${selectedReservasiToCancel.id}/cancel`, {
-        method: 'POST',
+      const response = await fetch(`/api/reservasi/${selectedReservasiToCancel.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
       });
       
-      // Jika menggunakan mockup, langsung update state
-      setReservasiList(prev => prev.map(res => 
-        res.id === selectedReservasiToCancel.id ? { ...res, status: 'cancelled' } : res
-      ));
+      if (response.ok) {
+        setReservasiList(prev => prev.map(res => 
+          res.id === selectedReservasiToCancel.id ? { ...res, status: 'cancelled' as const } : res
+        ));
+      }
       
       setIsCancelModalOpen(false);
       setSelectedReservasiToCancel(null);
