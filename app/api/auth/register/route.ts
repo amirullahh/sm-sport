@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const result = RegisterSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
     const { nama, email, no_hp, password } = result.data;
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     const info = db.prepare(
-      'INSERT INTO pelanggan (nama, email, no_hp, password) VALUES (?, ?, ?, ?)'
+      'INSERT INTO pelanggan (nama, email, no_hp, password_hash) VALUES (?, ?, ?, ?)'
     ).run(nama, email, no_hp, hashedPassword);
 
     return NextResponse.json({

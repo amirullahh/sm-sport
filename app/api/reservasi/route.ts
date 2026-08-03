@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     const result = ReservasiSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
     const { lapangan_id, tanggal, jam_mulai, jam_selesai, catatan } = body;

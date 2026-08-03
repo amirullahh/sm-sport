@@ -25,12 +25,13 @@ export default function Login() {
       
       const data = await res.json();
       
-      if (!res.ok) throw new Error(data.message || 'Gagal login');
+      if (!res.ok) throw new Error(data.error || 'Gagal login');
       
-      // Simulate set cookie for client state
-      document.cookie = `user_token=dummy_token; path=/; max-age=86400`;
+      // Set readable cookie for Navbar state (httpOnly cookie already set by API)
+      document.cookie = `sm-sport-logged-in=true; path=/; max-age=86400`;
       
       router.push('/reservasi');
+      router.refresh();
     } catch (err: any) {
       setError(err.message);
     } finally {

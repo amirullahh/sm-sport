@@ -20,18 +20,18 @@ export async function POST(request: Request) {
     const result = AdminLoginSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
     const { username, password } = result.data;
 
-    const admin = db.prepare('SELECT id, username, nama, password FROM admin WHERE username = ?').get(username) as any;
+    const admin = db.prepare('SELECT id, username, password_hash FROM admin WHERE username = ?').get(username) as any;
     
     if (!admin) {
       return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
 
-    const isMatch = bcrypt.compareSync(password, admin.password);
+    const isMatch = bcrypt.compareSync(password, admin.password_hash);
     if (!isMatch) {
       return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const tokenPayload = {
       id: admin.id,
       role: 'admin' as const,
-      nama: admin.nama,
+      nama: admin.username,
       username: admin.username
     };
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       message: 'Login berhasil',
       data: {
         id: admin.id,
-        nama: admin.nama,
+        nama: admin.username,
         username: admin.username
       }
     }, { status: 200 });

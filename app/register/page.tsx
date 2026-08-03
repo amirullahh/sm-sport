@@ -46,7 +46,7 @@ export default function Register() {
       
       const data = await res.json();
       
-      if (!res.ok) throw new Error(data.message || 'Gagal mendaftar');
+      if (!res.ok) throw new Error(data.error || 'Gagal mendaftar');
       
       setSuccess('Pendaftaran berhasil! Mengalihkan ke halaman login...');
       setTimeout(() => {

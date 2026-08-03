@@ -20,18 +20,18 @@ export async function POST(request: Request) {
     const result = LoginSchema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
     const { email, password } = result.data;
 
-    const pelanggan = db.prepare('SELECT id, nama, email, password FROM pelanggan WHERE email = ?').get(email) as any;
+    const pelanggan = db.prepare('SELECT id, nama, email, password_hash FROM pelanggan WHERE email = ?').get(email) as any;
     
     if (!pelanggan) {
       return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
     }
 
-    const isMatch = bcrypt.compareSync(password, pelanggan.password);
+    const isMatch = bcrypt.compareSync(password, pelanggan.password_hash);
     if (!isMatch) {
       return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
     }
