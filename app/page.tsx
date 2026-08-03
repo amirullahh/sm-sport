@@ -43,7 +43,7 @@ export default function Home() {
           Reservasi Lapangan Futsal & Badminton premium dengan mudah dan cepat.
         </p>
         <div className="flex gap-4">
-          <Link href="/jadwal" className="btn-primary text-lg px-8 py-3">Lihat Jadwal</Link>
+          <Link href="/login" className="btn-primary text-lg px-8 py-3">Lihat Jadwal</Link>
           <Link href="/register" className="btn-secondary text-lg px-8 py-3">Daftar Sekarang</Link>
         </div>
       </section>
