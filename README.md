@@ -2,6 +2,7 @@
 
 Sistem aplikasi web manajemen pemesanan fasilitas olahraga (futsal dan badminton) secara mandiri untuk pelanggan dan admin. Proyek ini disusun untuk pemenuhan sertifikasi **BNSP Skema Analis Program (SKM-2019-62010-002)**.
 
+**Author:** Asep padjri fadillah
 ## 🛠️ Teknologi yang Digunakan (Tech Stack)
 - **Framework:** Next.js 16 (App Router)
 - **Bahasa Pemrograman:** TypeScript
