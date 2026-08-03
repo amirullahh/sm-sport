@@ -44,3 +44,11 @@ next-env.d.ts
 /data/*.db
 /data/*.db-wal
 /data/*.db-shm
+
+# docs (internal documentation, not for public repo)
+/docs/
+
+# AI-related files
+AGENTS.md
+CLAUDE.md
+.agents/
