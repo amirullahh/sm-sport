@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -11,10 +11,33 @@ export default function Login() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Captcha state
+  const [num1, setNum1] = useState(0);
+  const [num2, setNum2] = useState(0);
+  const [captchaInput, setCaptchaInput] = useState('');
+
+  const generateCaptcha = () => {
+    setNum1(Math.floor(Math.random() * 10) + 1);
+    setNum2(Math.floor(Math.random() * 10) + 1);
+    setCaptchaInput('');
+  };
+
+  useEffect(() => {
+    generateCaptcha();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    // Validate Captcha
+    if (parseInt(captchaInput) !== num1 + num2) {
+      setError('Jawaban captcha salah, silakan coba lagi.');
+      generateCaptcha();
+      setLoading(false);
+      return;
+    }
     
     try {
       const res = await fetch('/api/auth/login', {
@@ -34,6 +57,8 @@ export default function Login() {
       router.refresh();
     } catch (err: any) {
       setError(err.message);
+      // Regenerate captcha on failure for security
+      generateCaptcha();
     } finally {
       setLoading(false);
     }
@@ -80,6 +105,23 @@ export default function Login() {
               required
             />
           </div>
+          
+          {/* Captcha Field */}
+          {num1 > 0 && (
+            <div className="pt-2">
+              <label className="block text-center text-md font-bold text-slate-200 mb-3">
+                Berapa {num1} + {num2} = ?
+              </label>
+              <input 
+                type="number" 
+                className="input-field text-center" 
+                placeholder="Masukkan jawaban"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+                required
+              />
+            </div>
+          )}
           
           <button 
             type="submit" 
