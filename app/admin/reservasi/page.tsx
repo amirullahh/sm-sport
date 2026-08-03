@@ -80,7 +80,7 @@ export default function AdminReservasi() {
           <option value="">Semua Status</option>
           <option value="pending">Pending</option>
           <option value="confirmed">Confirmed</option>
-          <option value="canceled">Canceled</option>
+          <option value="cancelled">Cancelled</option>
           <option value="completed">Completed</option>
         </select>
       </div>
@@ -131,7 +131,7 @@ export default function AdminReservasi() {
                       </button>
                     )}
                     {(row.status === 'pending' || row.status === 'confirmed') && (
-                      <button onClick={() => updateStatus(row.id, 'canceled')} className="bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444]/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                      <button onClick={() => updateStatus(row.id, 'cancelled')} className="bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444]/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
                         Batalkan
                       </button>
                     )}

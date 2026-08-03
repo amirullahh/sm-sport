@@ -70,7 +70,7 @@ export async function PUT(
     const { id } = await params;
     const { status } = await request.json();
 
-    if (!['pending', 'confirmed', 'canceled', 'completed'].includes(status)) {
+    if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
       return NextResponse.json({ error: 'Status tidak valid' }, { status: 400 });
     }
 
@@ -83,7 +83,7 @@ export async function PUT(
       if (reservasi.pelanggan_id !== user.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
       }
-      if (status !== 'canceled') {
+      if (status !== 'cancelled') {
         return NextResponse.json({ error: 'Pelanggan hanya bisa membatalkan reservasi' }, { status: 403 });
       }
       if (reservasi.status !== 'pending' && reservasi.status !== 'confirmed') {

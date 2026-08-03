@@ -74,7 +74,7 @@ export default function RiwayatReservasiPage() {
       const response = await fetch(`/api/reservasi/${selectedReservasiToCancel.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'canceled' }),
+        body: JSON.stringify({ status: 'cancelled' }),
       });
       
       if (response.ok) {
