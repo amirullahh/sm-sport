@@ -5,12 +5,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    // singleFork mencegah worker crash di CI saat better-sqlite3 (native module) di-load.
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    // Vitest 4: singleFork diganti maxWorkers.
+    // Mencegah worker crash di CI saat better-sqlite3 (native module) di-load.
+    maxWorkers: 1,
   },
   resolve: {
     alias: {
