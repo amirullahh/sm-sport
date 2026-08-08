@@ -5,11 +5,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    // singleFork: jalankan semua test dalam SATU proses fork.
-    // Mencegah worker crash di CI saat better-sqlite3 (native C++ module) di-load.
+    // better-sqlite3 = native C++ module.
+    // pool 'forks' (child_process.fork) CRASH di CI Ubuntu karena
+    // native binary tidak bisa di-load di forked process.
+    // pool 'threads' (worker_threads) jalankan di SAME PROCESS → aman.
+    // singleThread: hanya 1 thread → thread-safety tidak jadi masalah.
+    pool: 'threads',
     poolOptions: {
-      forks: {
-        singleFork: true,
+      threads: {
+        singleThread: true,
       },
     },
   },
