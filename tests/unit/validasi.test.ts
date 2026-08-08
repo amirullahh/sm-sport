@@ -18,7 +18,7 @@
  * + Validasi tanggal masa lalu & jam operasional (fitur baru).
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
@@ -48,6 +48,10 @@ beforeAll(async () => {
 
   // Arahkan lib/db ke database test SEBELUM import modul produksi.
   process.env.DATABASE_PATH = TEST_DB_PATH;
+
+  // Reset module cache agar lib/db membuat koneksi baru ke TEST_DB_PATH
+  // (wajib karena isolate: false di vitest.config — shared module state antar file).
+  vi.resetModules();
 
   const dbModule = await import('@/lib/db');
   const validasi = await import('@/lib/validasi');

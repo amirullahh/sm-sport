@@ -7,7 +7,7 @@
  * db yang sama (lib/db) dengan database test terpisah.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
@@ -26,6 +26,10 @@ beforeAll(async () => {
   }
 
   process.env.DATABASE_PATH = TEST_DB_PATH;
+
+  // Reset module cache agar lib/db membuat koneksi baru ke TEST_DB_PATH
+  // (wajib karena isolate: false di vitest.config — shared module state antar file).
+  vi.resetModules();
 
   const dbModule = await import('@/lib/db');
   const validasi = await import('@/lib/validasi');
