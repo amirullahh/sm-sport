@@ -53,8 +53,8 @@ export default function Register() {
         router.push('/login');
       }, 2000);
       
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
     } finally {
       setLoading(false);
     }

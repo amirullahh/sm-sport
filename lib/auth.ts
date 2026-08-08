@@ -7,10 +7,22 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-/** Secret key untuk signing JWT, di-encode ke Uint8Array */
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'default-secret-key'
-);
+/**
+ * Secret key untuk signing JWT, di-encode ke Uint8Array.
+ * Dibaca lazy (saat dipakai) supaya error muncul ketika token diproses,
+ * bukan saat module di-load. FAIL-CLOSED: jika JWT_SECRET tidak di-set,
+ * langsung throw — tidak ada fallback hardcoded yang bisa dipalsukan.
+ */
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      'JWT_SECRET environment variable tidak di-set. ' +
+      'Set nilai acak yang kuat (min. 32 karakter) sebelum deploy.'
+    );
+  }
+  return new TextEncoder().encode(secret);
+}
 
 /** Nama cookie untuk session */
 const COOKIE_NAME = 'sm-sport-session';
@@ -39,7 +51,7 @@ export async function signToken(payload: TokenPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(TOKEN_EXPIRY)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 /**
@@ -49,7 +61,7 @@ export async function signToken(payload: TokenPayload): Promise<string> {
  */
 export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as unknown as TokenPayload;
   } catch {
     return null;

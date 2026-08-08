@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { AdminLoginSchema } from '@/lib/validasi';
 import { signToken, setAuthCookie } from '@/lib/auth';
+import { checkRateLimit, clearRateLimit, getClientIp } from '@/lib/rate-limit';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -25,8 +26,19 @@ export async function POST(request: Request) {
 
     const { username, password } = result.data;
 
-    const admin = db.prepare('SELECT id, username, password_hash FROM admin WHERE username = ?').get(username) as any;
-    
+    // Rate limit khusus admin: lebih ketat (5 percobaan / 15 menit / IP+username).
+    const rateKey = `admin-login:${getClientIp(request)}:${username.toLowerCase()}`;
+    const rate = checkRateLimit(rateKey, 5, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json({
+        error: `Terlalu banyak percobaan login. Coba lagi dalam ${rate.retryAfterSeconds} detik.`
+      }, { status: 429 });
+    }
+
+    const admin = db.prepare('SELECT id, username, password_hash FROM admin WHERE username = ?').get(username) as
+      | { id: number; username: string; password_hash: string }
+      | undefined;
+
     if (!admin) {
       return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
@@ -35,6 +47,8 @@ export async function POST(request: Request) {
     if (!isMatch) {
       return NextResponse.json({ error: 'Username atau password salah' }, { status: 401 });
     }
+
+    clearRateLimit(rateKey);
 
     const tokenPayload = {
       id: admin.id,

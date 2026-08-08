@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -11,20 +11,27 @@ export default function Login() {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  // Captcha state
+  // Captcha state. Nilai awal 0 (sama di server & client) untuk menghindari
+  // hydration mismatch; angka acak dibangkitkan setelah mount di client.
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
   const [captchaInput, setCaptchaInput] = useState('');
 
-  const generateCaptcha = () => {
+  const generateCaptcha = useCallback(() => {
     setNum1(Math.floor(Math.random() * 10) + 1);
     setNum2(Math.floor(Math.random() * 10) + 1);
     setCaptchaInput('');
-  };
-
-  useEffect(() => {
-    generateCaptcha();
   }, []);
+
+  // Bangkitkan captcha HANYA di client setelah hydration.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      await Promise.resolve();
+      if (active) generateCaptcha();
+    })();
+    return () => { active = false; };
+  }, [generateCaptcha]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +62,8 @@ export default function Login() {
       
       router.push('/reservasi');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
       // Regenerate captcha on failure for security
       generateCaptcha();
     } finally {

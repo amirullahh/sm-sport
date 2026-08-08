@@ -6,15 +6,25 @@ import Link from 'next/link';
 interface Lapangan {
   id: number;
   nama: string;
-  jenis: 'Futsal' | 'Badminton';
+  jenis: 'futsal' | 'badminton';
   harga_per_jam: number;
-  status: 'Tersedia' | 'Pemeliharaan';
+  status: 'aktif' | 'nonaktif';
 }
 
 export default function Home() {
   const [lapangan, setLapangan] = useState<Lapangan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      await Promise.resolve();
+      if (active) setIsLoggedIn(document.cookie.includes('sm-sport-logged-in'));
+    })();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const fetchLapangan = async () => {
@@ -23,8 +33,8 @@ export default function Home() {
         if (!res.ok) throw new Error('Gagal memuat data lapangan');
         const json = await res.json();
         setLapangan(json.data || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
       } finally {
         setLoading(false);
       }
@@ -43,7 +53,7 @@ export default function Home() {
           Reservasi Lapangan Futsal & Badminton premium dengan mudah dan cepat.
         </p>
         <div className="flex gap-4">
-          <Link href="/login" className="btn-primary text-lg px-8 py-3">Lihat Jadwal</Link>
+          <Link href={isLoggedIn ? '/reservasi/baru' : '/login'} className="btn-primary text-lg px-8 py-3">Lihat Jadwal</Link>
           <Link href="/register" className="btn-secondary text-lg px-8 py-3">Daftar Sekarang</Link>
         </div>
       </section>
@@ -99,7 +109,7 @@ export default function Home() {
                   <div className="text-xl font-bold text-emerald-400 mb-6">
                     Rp {lap.harga_per_jam.toLocaleString('id-ID')}<span className="text-sm font-normal text-slate-400"> / jam</span>
                   </div>
-                  <Link href="/login" className="block text-center btn-secondary w-full">Cek Ketersediaan</Link>
+                  <Link href={isLoggedIn ? '/reservasi/baru' : '/login'} className="block text-center btn-secondary w-full">Cek Ketersediaan</Link>
                 </div>
               ))
             ) : (

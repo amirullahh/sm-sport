@@ -11,7 +11,7 @@ import { clearAuthCookie } from '@/lib/auth';
  * @param request Request HTTP
  * @returns Response JSON
  */
-export async function POST(request: Request) {
+export async function POST() {
   try {
     await clearAuthCookie();
     return NextResponse.json({ message: 'Logout berhasil' }, { status: 200 });

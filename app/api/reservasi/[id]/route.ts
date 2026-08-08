@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { validasiTanggalMasaLalu } from '@/lib/validasi';
 
 /**
  * Mengambil detail reservasi tunggal.
@@ -31,7 +32,21 @@ export async function GET(
       JOIN lapangan l ON r.lapangan_id = l.id
       JOIN pelanggan p ON r.pelanggan_id = p.id
       WHERE r.id = ?
-    `).get(id) as any;
+    `).get(id) as
+      | {
+          id: number;
+          lapangan_id: number;
+          pelanggan_id: number;
+          tanggal: string;
+          jam_mulai: string;
+          jam_selesai: string;
+          total_harga: number;
+          status: string;
+          lapangan_nama: string;
+          pelanggan_nama: string;
+          no_hp: string;
+        }
+      | undefined;
 
     if (!reservasi) {
       return NextResponse.json({ error: 'Reservasi tidak ditemukan' }, { status: 404 });
@@ -74,7 +89,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Status tidak valid' }, { status: 400 });
     }
 
-    const reservasi = db.prepare('SELECT * FROM reservasi WHERE id = ?').get(id) as any;
+    const reservasi = db.prepare('SELECT * FROM reservasi WHERE id = ?').get(id) as
+      | {
+          id: number;
+          pelanggan_id: number;
+          tanggal: string;
+          jam_mulai: string;
+          status: string;
+        }
+      | undefined;
+
     if (!reservasi) {
       return NextResponse.json({ error: 'Reservasi tidak ditemukan' }, { status: 404 });
     }
@@ -89,15 +113,18 @@ export async function PUT(
       if (reservasi.status !== 'pending' && reservasi.status !== 'confirmed') {
         return NextResponse.json({ error: 'Reservasi tidak dapat dibatalkan' }, { status: 400 });
       }
-      
-      // Check if before start time (simple check based on today date vs reservation date)
-      const today = new Date().toISOString().split('T')[0];
-      if (reservasi.tanggal < today) {
-        return NextResponse.json({ error: 'Tidak dapat membatalkan reservasi yang sudah lewat' }, { status: 400 });
+
+      // Pelanggan hanya boleh membatalkan SEBELUM jadwal dimulai.
+      // Menangani tanggal masa lalu sekaligus jadwal hari ini yang sudah lewat.
+      if (!validasiTanggalMasaLalu(reservasi.tanggal, reservasi.jam_mulai)) {
+        return NextResponse.json({ error: 'Tidak dapat membatalkan reservasi yang sudah lewat atau sedang berlangsung' }, { status: 400 });
       }
     }
 
-    db.prepare('UPDATE reservasi SET status = ? WHERE id = ?').run(status, id);
+    // Admin / pelanggan: setiap perubahan status mencatat updated_at.
+    db.prepare(
+      `UPDATE reservasi SET status = ?, updated_at = datetime('now') WHERE id = ?`
+    ).run(status, id);
 
     return NextResponse.json({ message: 'Status reservasi berhasil diupdate' }, { status: 200 });
 

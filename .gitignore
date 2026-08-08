@@ -1,4 +1,6 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================================
+# SM Sport Center — .gitignore
+# ============================================================
 
 # dependencies
 /node_modules
@@ -30,25 +32,29 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# environment variables (jangan commit!)
 .env*
+!.env.example
 
-# vercel
-.vercel
+# database (SQLite files)
+/data/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# database
-/data/*.db
-/data/*.db-wal
-/data/*.db-shm
-
-# docs (internal documentation, not for public repo)
+# docs (internal, bukan untuk repo publik)
 /docs/
 
-# AI-related files
+# AI tools — tidak di-commit
 AGENTS.md
 CLAUDE.md
 .agents/
+.claude/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+Thumbs.db

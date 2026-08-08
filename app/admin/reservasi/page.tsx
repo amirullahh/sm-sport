@@ -20,34 +20,45 @@ export default function AdminReservasi() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchReservasi = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/reservasi');
-      const json = await res.json();
-      setReservasiList(json.data || []);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+  const loadReservasi = async (): Promise<Reservasi[]> => {
+    const res = await fetch('/api/reservasi');
+    if (!res.ok) throw new Error('Gagal memuat data reservasi');
+    const json = await res.json();
+    return json.data || [];
   };
 
   useEffect(() => {
-    fetchReservasi();
+    let active = true;
+    (async () => {
+      try {
+        const data = await loadReservasi();
+        if (active) setReservasiList(data);
+      } catch (err: unknown) {
+        if (active) setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
   const updateStatus = async (id: number, status: string) => {
+    setError(null);
     try {
-      await fetch(`/api/reservasi/${id}`, {
+      const res = await fetch(`/api/reservasi/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
-      fetchReservasi();
-    } catch (error) {
-      console.error(error);
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Gagal mengubah status');
+      }
+      setReservasiList(await loadReservasi());
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
     }
   };
 
@@ -64,15 +75,21 @@ export default function AdminReservasi() {
         <p className="text-[#94A3B8] mt-2">Atur dan pantau semua booking masuk.</p>
       </div>
 
+      {error && (
+        <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#F87171] px-4 py-3 rounded-xl text-sm">
+          {error}
+        </div>
+      )}
+
       <div className="glass-card p-4 rounded-xl flex flex-wrap gap-4 items-center">
-        <input 
-          type="text" 
-          placeholder="Cari pelanggan..." 
-          className="input-field flex-1 min-w-[200px]" 
+        <input
+          type="text"
+          placeholder="Cari pelanggan..."
+          className="input-field flex-1 min-w-[200px]"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <select 
+        <select
           className="input-field flex-1 min-w-[150px] appearance-none"
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
@@ -107,7 +124,7 @@ export default function AdminReservasi() {
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((row, i) => (
+              {filteredData.map((row) => (
                 <tr key={row.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   <td className="py-4 px-4 text-[#94A3B8]">{row.id}</td>
                   <td className="py-4 px-4 text-[#F8FAFC] font-medium">{row.pelanggan_nama}</td>
@@ -147,7 +164,7 @@ export default function AdminReservasi() {
           </table>
         )}
       </div>
-      
+
     </div>
   );
 }

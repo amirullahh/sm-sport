@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { ReservasiSchema, buatReservasi, validasiJamOperasional } from '@/lib/validasi';
+import { ReservasiSchema, buatReservasi, validasiJamOperasional, validasiTanggalMasaLalu } from '@/lib/validasi';
 import { getCurrentUser } from '@/lib/auth';
 
 /**
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       JOIN pelanggan p ON r.pelanggan_id = p.id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (user.role === 'pelanggan') {
       query += ` AND r.pelanggan_id = ?`;
@@ -90,10 +90,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
-    const { lapangan_id, tanggal, jam_mulai, jam_selesai, catatan } = body;
+    // Pakai data hasil validasi schema, bukan body mentah.
+    const { lapangan_id, tanggal, jam_mulai, jam_selesai, catatan } = result.data;
 
     if (!validasiJamOperasional(jam_mulai, jam_selesai)) {
       return NextResponse.json({ error: 'Jam booking harus dalam jam operasional (08:00 - 23:00)' }, { status: 400 });
+    }
+
+    if (!validasiTanggalMasaLalu(tanggal, jam_mulai)) {
+      return NextResponse.json({ error: 'Tidak dapat booking di tanggal atau jam yang sudah lewat' }, { status: 400 });
     }
 
     try {
@@ -111,14 +116,15 @@ export async function POST(request: Request) {
         data: res
       }, { status: 201 });
       
-    } catch (err: any) {
-      if (err.message === 'BENTROK_JADWAL') {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'BENTROK_JADWAL') {
         return NextResponse.json({ error: 'Jadwal bentrok dengan reservasi lain' }, { status: 409 });
-      } else if (err.message === 'LAPANGAN_TIDAK_DITEMUKAN') {
+      } else if (message === 'LAPANGAN_TIDAK_DITEMUKAN') {
         return NextResponse.json({ error: 'Lapangan tidak ditemukan' }, { status: 404 });
-      } else if (err.message === 'LAPANGAN_NONAKTIF') {
+      } else if (message === 'LAPANGAN_NONAKTIF') {
         return NextResponse.json({ error: 'Lapangan sedang tidak aktif' }, { status: 400 });
-      } else if (err.message === 'DURASI_INVALID') {
+      } else if (message === 'DURASI_INVALID') {
         return NextResponse.json({ error: 'Durasi jam tidak valid' }, { status: 400 });
       }
       throw err;

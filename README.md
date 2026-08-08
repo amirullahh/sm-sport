@@ -1,70 +1,221 @@
-# Sistem Reservasi Lapangan SM Sport Center
+<div align="center">
 
-Sistem aplikasi web manajemen pemesanan fasilitas olahraga (futsal dan badminton) secara mandiri untuk pelanggan dan admin. Proyek ini disusun untuk pemenuhan sertifikasi **BNSP Skema Analis Program (SKM-2019-62010-002)**.
+# ⚽ SM Sport Center
 
-**Author:** Asep padjri fadillah
-## 🛠️ Teknologi yang Digunakan (Tech Stack)
-- **Framework:** Next.js 16 (App Router)
-- **Bahasa Pemrograman:** TypeScript
-- **Basis Data:** SQLite (menggunakan modul `better-sqlite3`)
-- **Desain UI:** Tailwind CSS (dengan efek modern *Glassmorphism*)
-- **Keamanan & Validasi:** `jose` (JWT Auth Cookies), `zod` (Skema Validasi Request)
+### Sistem Reservasi Lapangan Olahraga Online
 
-## 🚀 Memulai Proyek (Quick Start)
-Untuk menjalankan aplikasi secara lokal di mesin Anda, jalankan instruksi di bawah ini:
+[![CI](https://github.com/amirullahh/sm-sport/actions/workflows/ci.yml/badge.svg)](https://github.com/amirullahh/sm-sport/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 
-1. **Unduh Dependensi**
-   ```bash
-   npm install
-   ```
+Aplikasi web manajemen reservasi lapangan futsal & badminton — built dengan Next.js 16 App Router, TypeScript, Tailwind CSS, dan SQLite.
 
-2. **Inisialisasi Basis Data**
-   Tindakan ini akan membuat skema tabel SQLite baru dan mengisi benih data master lapangan dan akun admin.
-   ```bash
-   npm run db:init
-   ```
-
-3. **Jalankan *Server Development***
-   ```bash
-   npm run dev
-   ```
-   Aplikasi dapat diakses via peramban di alamat: [http://localhost:3000](http://localhost:3000).
-
-## 📂 Struktur Direktori Utama
-```text
-sm-sport-reservasi/
-├── app/                  # Rute Halaman (Pages) dan Rute API (Endpoints) Next.js
-│   ├── admin/            # Area dashboard pengelola sistem
-│   ├── api/              # Kumpulan modul backend REST API
-│   └── reservasi/        # Area khusus bagi member untuk booking lapangan
-├── db/                   # Repositori script struktur tabel database
-├── docs/                 # [DOKUMEN BNSP] Analisis, ERD, Laporan Testing/Debugging
-├── lib/                  # Logika bisnis inti (konektor db, autentikasi, fungsi validasi)
-└── middleware.ts         # Penjaga rute sistem
-```
-*(Lihat `docs/04-dokumentasi-kode.md` untuk deskripsi arsitektur penuh).*
-
-## 🔐 Kredensial Akun (Demo)
-Gunakan kredensial berikut untuk menguji *backend* manajemen:
-- **Hak Akses Admin:**
-  - Login Page: `http://localhost:3000/admin/login`
-  - Username: `admin`
-  - Password: `admin123`
-- **Hak Akses Publik:**
-  - Silakan daftarkan akun baru di menu **Register** untuk bertransaksi sebagai pelanggan reguler.
-
-## 🧪 Pengujian (Testing)
-Aplikasi terintegrasi dengan modul penguji otomatis. Seluruh tes mencakup fungsi logika kalkulasi harga, proteksi *overlap* jadwal, hingga skenario interaksi basis data.
-```bash
-npm run test
-```
-Sistem dipastikan melampaui metrik dengan hasil uji `PASS 12/12`. *(Lihat `docs/07-hasil-testing.md` untuk detail lebih lanjut).*
-
-## 🖼️ Tampilan Antarmuka (Screenshots)
-*(Ruang untuk lampiran tangkapan layar sistem. Tambahkan path image Anda di sini)*
-- [Landing Page Image Placeholder]
-- [Admin Dashboard Image Placeholder]
-- [Booking Wizard Image Placeholder]
+</div>
 
 ---
-Dikembangkan oleh Kandidat Analis Program.
+
+## 📋 Daftar Isi
+
+- [✨ Fitur](#-fitur)
+- [🛠️ Tech Stack](#-tech-stack)
+- [🚀 Quick Start](#-quick-start)
+- [🔐 Akun Demo](#-akun-demo)
+- [📁 Struktur Project](#-struktur-project)
+- [🔒 Keamanan](#-keamanan)
+- [✅ Testing](#-testing)
+- [ CI/CD](#cicd-github-actions)
+- [📄 License](#-license)
+
+---
+
+## ✨ Fitur
+
+### 👤 Pelanggan
+- 🔐 Registrasi & login dengan captcha
+- 📅 Booking lapangan — wizard 3 langkah (pilih → waktu → konfirmasi)
+- 📊 Lihat riwayat reservasi dengan filter & search
+- ❌ Batalkan reservasi (sebelum jadwal dimulai)
+- 🔍 Cek ketersediaan jadwal per lapangan & tanggal
+
+### 🔒 Admin
+- 📊 Dashboard statistik (reservasi hari ini, revenue, lapangan aktif, total pelanggan)
+- 🏟️ CRUD lapangan — tambah, edit, nonaktifkan (dengan konfirmasi hapus)
+- 📋 Manajemen reservasi — lihat semua, filter status, konfirmasi/batalkan
+- 👥 Data pelanggan dengan pencarian
+- 📈 Laporan revenue per lapangan dengan export CSV
+
+### 🛡️ Keamanan
+- JWT + httpOnly cookie (XSS-protected)
+- Rate limiting (5 percobaan / 15 menit per IP+akun)
+- Validasi Zod di semua input
+- SQL injection protected (parameterized queries)
+- Prevent double-booking (BEGIN IMMEDIATE transaction)
+
+---
+
+## 🛠️ Tech Stack
+
+| Komponen | Teknologi |
+|----------|-----------|
+| **Framework** | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) |
+| **Bahasa** | [TypeScript](https://www.typescriptlang.org/) 5 |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) 4 (Glassmorphism) |
+| **Database** | SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
+| **Auth** | [jose](https://github.com/panva/jose) (JWT) + httpOnly cookie |
+| **Password** | [bcryptjs](https://github.com/nicolo-ribaudo/bcryptjs) |
+| **Font** | [next/font](https://nextjs.org/docs/basic-features/fonts) (self-hosted) |
+| **Testing** | [Vitest](https://vitest.dev/) |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) ≥ 18
+- [npm](https://www.npmjs.com/) ≥ 9
+
+### Instalasi
+
+```bash
+# 1. Clone repository
+git clone https://github.com/amirullahh/sm-sport.git
+cd sm-sport
+
+# 2. Install dependencies
+npm install
+
+# 3. Buat file .env.local dari contoh
+cp .env.example .env.local
+
+# 4. Edit .env.local — isi JWT_SECRET (penting!)
+#    JWT_SECRET=<ganti-dengan-string-random-kuat-min32-karakter>
+
+# 5. Inisialisasi database & seed data
+npm run db:init
+
+# 6. Jalankan development server
+npm run dev
+```
+
+Buka [http://localhost:3000](http://localhost:3000) di browser.
+
+---
+
+## 🔐 Akun Demo
+
+| Role | URL | Kredensial |
+|------|-----|-----------|
+| **Admin** | `/admin/login` | `admin` / `admin123` |
+| **Pelanggan** | `/login` | `budi@mail.com` / `pelanggan123` |
+
+> ⚠️ Ganti password admin di production!
+
+---
+
+## 📁 Struktur Project
+
+```
+sm-sport/
+├── app/
+│   ├── admin/              # Admin panel (dashboard, CRUD, laporan)
+│   ├── api/                # REST API endpoints
+│   ├── components/         # Shared components (Navbar, LayoutShell)
+│   ├── login/              # Customer login page
+│   ├── register/           # Customer register page
+│   └── reservasi/          # Customer reservasi pages & booking wizard
+├── db/
+│   ├── schema.sql          # Database schema + trigger
+│   └── seed.ts             # Seed data script
+├── lib/
+│   ├── auth.ts             # JWT auth helpers
+│   ├── db.ts               # SQLite connection
+│   ├── rate-limit.ts       # In-memory rate limiter
+│   └── validasi.ts         # Zod schemas + business logic
+├── middleware.ts            # Route protection middleware
+├── tests/
+│   ├── unit/validasi.test.ts
+│   └── integration/alur-reservasi.test.ts
+└── .github/workflows/ci.yml
+```
+
+---
+
+## 🔒 Keamanan
+
+| Fitur | Implementasi |
+|-------|-------------|
+| **JWT Auth** | httpOnly cookie, 24 jam expiry, `sameSite: lax` |
+| **JWT Secret** | FAIL-CLOSED — tidak ada hardcoded fallback |
+| **Password** | bcrypt hash (10 rounds) |
+| **Rate Limiting** | 5 percobaan / 15 menit per IP+akun |
+| **SQL Injection** | Parameterized queries |
+| **Double Booking** | SQLite BEGIN IMMEDIATE transaction |
+| **Input Validation** | Zod schemas |
+| **Past Date Prevention** | API menolak booking tanggal/jam yang sudah lewat |
+| **CSV Injection** | Prefix `=+−@` di export CSV |
+
+---
+
+## ✅ Testing
+
+```bash
+# Jalankan semua test (23 test cases)
+npm test
+
+# Type check
+npx tsc --noEmit
+
+# Lint
+npx eslint .
+
+# Build production
+npm run build
+```
+
+### Test Coverage
+- ✅ Autentikasi (login benar/salah)
+- ✅ Reservasi (buat, bentrok, validasi jam operasional)
+- ✅ Validasi tanggal masa lalu
+- ✅ Schema Zod (catatan max 255)
+- ✅ CRUD admin (lapangan, pelanggan)
+- ✅ Alur integrasi (login → reservasi → laporan)
+
+---
+
+## 📁 CI/CD (GitHub Actions)
+
+Pipeline otomatis berjalan pada setiap push & pull request ke branch `main`:
+
+```
+Type Check → Lint → Test → Build
+```
+
+Semua harus PASS sebelum code di-merge.
+
+---
+
+## 🌐 Deployment
+
+### Vercel (Demo)
+Push ke GitHub → Hubungkan di [vercel.com](https://vercel.com) → Set `JWT_SECRET` → Deploy.
+
+### Railway / VPS (Production)
+SQLite membutuhkan filesystem persisten. Gunakan [Railway](https://railway.app/) ($5/bulan) atau VPS ([Hetzner](https://www.hetzner.com/cloud/) $5/bulan).
+
+> ⚠️ **SQLite di Vercel:** Database bersifat ephemeral. Untuk production, gunakan [Turso](https://turso.tech/) atau [Supabase](https://supabase.com/).
+
+---
+
+## 📄 License
+
+MIT License — Silakan gunakan untuk belajar dan portofolio.
+
+---
+
+<div align="center">
+
+**Dibuat oleh [Amirullah Hidayat](https://github.com/amirullahh)**
+
+</div>

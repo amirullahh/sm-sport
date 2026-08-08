@@ -2,7 +2,7 @@
   "name": "sm-sport-reservasi",
   "version": "0.1.0",
   "private": true,
-  "author": "Asep padjri fadillah",
+  "author": "Amirullah Hidayat",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

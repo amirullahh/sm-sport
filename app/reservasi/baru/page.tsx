@@ -20,7 +20,8 @@ export default function BookingBaruPage() {
   const router = useRouter();
   
   const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  // isLoading = true di awal (memuat daftar lapangan), di-reset setelah fetch.
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Step 1: Lapangan
@@ -39,68 +40,68 @@ export default function BookingBaruPage() {
   const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch lapangan
-    fetchLapangan();
-  }, []);
-
-  useEffect(() => {
-    if (selectedLapangan && selectedDate) {
-      fetchJadwal(selectedLapangan.id, selectedDate);
-    }
-  }, [selectedLapangan, selectedDate]);
-
-  const fetchLapangan = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/lapangan');
-      if (response.ok) {
-        const json = await response.json();
-        const rows = json.data || [];
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch('/api/lapangan');
+        const rows = response.ok ? (await response.json()).data || [] : [];
+        if (!active) return;
         // Map DB fields to component interface
-        const mapped = rows.map((r: any) => ({
+        const mapped = rows.map((r: { id: number; nama: string; jenis: string; harga_per_jam: number }): Lapangan => ({
           id: String(r.id),
           nama: r.nama,
           tipe: r.jenis,
           hargaPerJam: r.harga_per_jam,
         }));
         setLapanganList(mapped);
-      } else {
-        setLapanganList([]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (active) setIsLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    })();
+    return () => { active = false; };
+  }, []);
 
-  const fetchJadwal = async (lapanganId: string, tanggal: string) => {
-    setIsLoadingJadwal(true);
-    setSelectedStartTime(null);
-    setSelectedEndTime(null);
-    try {
-      const response = await fetch(`/api/lapangan/${lapanganId}/jadwal?tanggal=${tanggal}`);
-      const json = response.ok ? await response.json() : { data: [] };
-      const bookedSlots = json.data || [];
+  useEffect(() => {
+    if (!selectedLapangan || !selectedDate) return;
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch(`/api/lapangan/${selectedLapangan.id}/jadwal?tanggal=${selectedDate}`);
+        const json = response.ok ? await response.json() : { data: [] };
+        const bookedSlots = json.data || [];
+        if (!active) return;
 
-      // Build time grid 08:00 - 22:00 and mark booked slots
-      const slots: TimeSlot[] = [];
-      for (let i = 8; i <= 22; i++) {
-        const timeString = `${i.toString().padStart(2, '0')}:00`;
-        // Check if this hour falls within any booked reservation
-        const isBooked = bookedSlots.some((r: any) => {
-          const startH = parseInt(r.jam_mulai.split(':')[0]);
-          const endH = parseInt(r.jam_selesai.split(':')[0]);
-          return i >= startH && i < endH;
-        });
-        slots.push({ time: timeString, isBooked });
+        // Jam yang sudah lewat hari ini tidak bisa dibooking (pengalaman UX:
+        // dicegah di frontend, dan backend juga menolak via validasi tanggal).
+        const nowDate = new Date();
+        const isToday = selectedDate === nowDate.toISOString().split('T')[0];
+        const nowHour = nowDate.getHours();
+        const nowMinute = nowDate.getMinutes();
+
+        // Build time grid 08:00 - 22:00 and mark booked slots
+        const slots: TimeSlot[] = [];
+        for (let i = 8; i <= 22; i++) {
+          const timeString = `${i.toString().padStart(2, '0')}:00`;
+          // Check if this hour falls within any booked reservation
+          const isBooked = bookedSlots.some((r: { jam_mulai: string; jam_selesai: string }) => {
+            const startH = parseInt(r.jam_mulai.split(':')[0]);
+            const endH = parseInt(r.jam_selesai.split(':')[0]);
+            return i >= startH && i < endH;
+          });
+          const isPastToday = isToday && (i < nowHour || (i === nowHour && nowMinute > 0));
+          slots.push({ time: timeString, isBooked: isBooked || isPastToday });
+        }
+        setTimeSlots(slots);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (active) setIsLoadingJadwal(false);
       }
-      setTimeSlots(slots);
-    } catch (err) {
-      console.error(err);
-    }
-    setIsLoadingJadwal(false);
-  };
+    })();
+    return () => { active = false; };
+  }, [selectedLapangan, selectedDate]);
 
   const handleTimeSlotClick = (time: string, isBooked: boolean) => {
     if (isBooked) return;
@@ -205,7 +206,7 @@ export default function BookingBaruPage() {
         setError(json.error || 'Gagal membuat reservasi');
         setIsLoading(false);
       }
-    } catch (err) {
+    } catch {
       setError('Gagal membuat reservasi. Silakan coba lagi.');
       setIsLoading(false);
     }
@@ -280,7 +281,12 @@ export default function BookingBaruPage() {
                 lapanganList.map((lapangan) => (
                   <div 
                     key={lapangan.id} 
-                    onClick={() => setSelectedLapangan(lapangan)}
+                    onClick={() => {
+                      setSelectedLapangan(lapangan);
+                      setIsLoadingJadwal(true);
+                      setSelectedStartTime(null);
+                      setSelectedEndTime(null);
+                    }}
                     className={`glass-card p-6 rounded-2xl cursor-pointer transition-all duration-300 border-2
                       ${selectedLapangan?.id === lapangan.id 
                         ? 'border-primary bg-primary/5 shadow-[0_0_15px_rgba(16,185,129,0.2)] scale-[1.02]' 
@@ -334,7 +340,12 @@ export default function BookingBaruPage() {
                 className="input-field w-full md:w-auto"
                 value={selectedDate}
                 min={new Date().toISOString().split('T')[0]}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setIsLoadingJadwal(true);
+                  setSelectedStartTime(null);
+                  setSelectedEndTime(null);
+                }}
               />
             </div>
 

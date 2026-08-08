@@ -10,11 +10,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'default-secret-key'
-);
-
 const COOKIE_NAME = 'sm-sport-session';
+
+/**
+ * Secret JWT — FAIL-CLOSED. Tanpa JWT_SECRET yang valid, middleware
+ * menolak semua akses (bukan memakai fallback yang bisa dipalsukan).
+ */
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable tidak di-set');
+  }
+  return new TextEncoder().encode(secret);
+}
 
 /**
  * Middleware untuk mengecek autentikasi pada route yang diproteksi.
@@ -52,7 +60,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
 
     // Cek role untuk admin route
     if (isAdminRoute && payload.role !== 'admin') {

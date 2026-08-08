@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 /**
@@ -28,43 +28,55 @@ export default function RiwayatReservasiPage() {
   const [selectedReservasiToCancel, setSelectedReservasiToCancel] = useState<Reservasi | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  useEffect(() => {
-    fetchReservasi();
+  /** Row mentah dari API /api/reservasi. */
+  interface ReservasiRow {
+    id: number;
+    lapangan_id: number;
+    lapangan_nama?: string;
+    tanggal: string;
+    jam_mulai: string;
+    jam_selesai: string;
+    total_harga?: number;
+    status: string;
+  }
+
+  const fetchReservasi = useCallback(async (): Promise<Reservasi[]> => {
+    const response = await fetch('/api/reservasi');
+    if (!response.ok) throw new Error('Gagal memuat reservasi');
+    const json = await response.json();
+    const rows = json.data || [];
+    // Map DB column names to component interface
+    return rows.map((r: ReservasiRow): Reservasi => ({
+      id: String(r.id),
+      lapanganId: String(r.lapangan_id),
+      namaLapangan: r.lapangan_nama || 'Lapangan',
+      tanggal: r.tanggal,
+      waktuMulai: r.jam_mulai,
+      waktuSelesai: r.jam_selesai,
+      durasi: (() => {
+        const [sh, sm] = (r.jam_mulai || '0:0').split(':').map(Number);
+        const [eh, em] = (r.jam_selesai || '0:0').split(':').map(Number);
+        return (eh + em / 60) - (sh + sm / 60);
+      })(),
+      totalHarga: r.total_harga || 0,
+      status: r.status as Reservasi['status'],
+    }));
   }, []);
 
-  const fetchReservasi = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/reservasi');
-      if (response.ok) {
-        const json = await response.json();
-        const rows = json.data || [];
-        // Map DB column names to component interface
-        const mapped = rows.map((r: any) => ({
-          id: String(r.id),
-          lapanganId: String(r.lapangan_id),
-          namaLapangan: r.lapangan_nama || 'Lapangan',
-          tanggal: r.tanggal,
-          waktuMulai: r.jam_mulai,
-          waktuSelesai: r.jam_selesai,
-          durasi: (() => {
-            const [sh, sm] = (r.jam_mulai || '0:0').split(':').map(Number);
-            const [eh, em] = (r.jam_selesai || '0:0').split(':').map(Number);
-            return (eh + em / 60) - (sh + sm / 60);
-          })(),
-          totalHarga: r.total_harga || 0,
-          status: r.status,
-        }));
-        setReservasiList(mapped);
-      } else {
-        setReservasiList([]);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const data = await fetchReservasi();
+        if (active) setReservasiList(data);
+      } catch (error) {
+        console.error('Error fetching reservasi:', error);
+      } finally {
+        if (active) setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching reservasi:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    })();
+    return () => { active = false; };
+  }, [fetchReservasi]);
 
   const handleCancelReservasi = async () => {
     if (!selectedReservasiToCancel) return;

@@ -9,8 +9,12 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-/** Path ke file database SQLite */
-const DB_PATH = process.env.DATABASE_PATH || './data/sm-sport.db';
+/**
+ * Path ke file database SQLite.
+ * Di-resolve absolut terhadap working directory proyek, sehingga aman
+ * tidak peduli dari mana proses dijalankan (dev, start, atau test).
+ */
+const DB_PATH = path.resolve(process.cwd(), process.env.DATABASE_PATH || './data/sm-sport.db');
 
 /** Pastikan direktori data ada */
 const dbDir = path.dirname(DB_PATH);

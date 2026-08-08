@@ -1,6 +1,23 @@
 import type { Metadata } from 'next';
+import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import LayoutShell from './components/LayoutShell';
+
+// Font di-self-host oleh next/font (lebih cepat, tidak kena layout shift,
+// dan tidak bergantung CDN eksternal). Variable mengisi --font-body/--font-heading
+// yang dipakai globals.css.
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const poppins = Poppins({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-heading',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'SM Sport Center — Reservasi Lapangan Online',
@@ -14,15 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>
+      <body className={`${inter.variable} ${poppins.variable}`}>
         <LayoutShell>{children}</LayoutShell>
       </body>
     </html>

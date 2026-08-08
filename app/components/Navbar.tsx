@@ -11,8 +11,12 @@ export default function Navbar() {
   const router = useRouter();
 
   useEffect(() => {
-    const hasCookie = document.cookie.includes('sm-sport-logged-in');
-    setIsLoggedIn(hasCookie);
+    let active = true;
+    (async () => {
+      await Promise.resolve();
+      if (active) setIsLoggedIn(document.cookie.includes('sm-sport-logged-in'));
+    })();
+    return () => { active = false; };
   }, [pathname]);
 
   const handleLogout = async () => {

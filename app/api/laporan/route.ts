@@ -7,6 +7,24 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
+/** Baris hasil query laporan per lapangan. */
+interface LaporanRow {
+  lapangan_id: number;
+  lapangan_nama: string;
+  total_booking: number | null;
+  total_jam: number | null;
+  total_revenue: number | null;
+}
+
+/**
+ * Amankan sel CSV dari formula injection.
+ * Excel/Google Sheets mengeksekusi sel yang diawali =, +, -, atau @.
+ */
+function sanitizeCsvCell(value: unknown): string {
+  const str = String(value ?? '');
+  return /^[=+\-@]/.test(str) ? `'${str}` : str;
+}
+
 /**
  * Mendapatkan laporan pendapatan reservasi (hanya admin).
  * @param request Request HTTP
@@ -39,7 +57,7 @@ export async function GET(request: Request) {
     `;
     
     const whereConditions: string[] = [];
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (dari) {
       whereConditions.push(`r.tanggal >= ?`);
@@ -60,7 +78,7 @@ export async function GET(request: Request) {
 
     query += ` GROUP BY l.id, l.nama`;
 
-    const laporan = db.prepare(query).all(...params) as any[];
+    const laporan = db.prepare(query).all(...params) as LaporanRow[];
 
     // Calculate grand totals
     const grand_total = laporan.reduce((acc, curr) => ({
@@ -70,11 +88,22 @@ export async function GET(request: Request) {
     }), { total_booking: 0, total_jam: 0, total_revenue: 0 });
 
     if (format === 'csv') {
-      let csv = 'ID Lapangan,Nama Lapangan,Total Booking,Total Jam,Total Revenue\n';
-      laporan.forEach(row => {
-        csv += `${row.lapangan_id},${row.lapangan_nama},${row.total_booking || 0},${row.total_jam || 0},${row.total_revenue || 0}\n`;
-      });
-      csv += `Grand Total,,${grand_total.total_booking},${grand_total.total_jam},${grand_total.total_revenue}\n`;
+      const header = 'ID Lapangan,Nama Lapangan,Total Booking,Total Jam,Total Revenue';
+      const rows = laporan.map(row => [
+        sanitizeCsvCell(row.lapangan_id),
+        sanitizeCsvCell(row.lapangan_nama),
+        sanitizeCsvCell(row.total_booking ?? 0),
+        sanitizeCsvCell(row.total_jam ?? 0),
+        sanitizeCsvCell(row.total_revenue ?? 0),
+      ].join(','));
+      const grandRow = [
+        'Grand Total', '',
+        sanitizeCsvCell(grand_total.total_booking),
+        sanitizeCsvCell(grand_total.total_jam),
+        sanitizeCsvCell(grand_total.total_revenue),
+      ].join(',');
+
+      const csv = [header, ...rows, grandRow].join('\n');
       
       return new NextResponse(csv, {
         headers: {

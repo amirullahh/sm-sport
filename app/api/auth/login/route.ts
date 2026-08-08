@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { LoginSchema } from '@/lib/validasi';
 import { signToken, setAuthCookie } from '@/lib/auth';
+import { checkRateLimit, clearRateLimit, getClientIp } from '@/lib/rate-limit';
 import bcrypt from 'bcryptjs';
 
 /**
@@ -25,8 +26,24 @@ export async function POST(request: Request) {
 
     const { email, password } = result.data;
 
-    const pelanggan = db.prepare('SELECT id, nama, email, password_hash FROM pelanggan WHERE email = ?').get(email) as any;
-    
+    // Normalisasi email (sama seperti di register) agar case tidak membuat
+    // akun tidak bisa login.
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Rate limit: gabungkan IP + email agar satu akun tidak diburu brute-force,
+    // tanpa mengunci semua user pada IP yang sama.
+    const rateKey = `login:${getClientIp(request)}:${normalizedEmail}`;
+    const rate = checkRateLimit(rateKey);
+    if (!rate.allowed) {
+      return NextResponse.json({
+        error: `Terlalu banyak percobaan login. Coba lagi dalam ${rate.retryAfterSeconds} detik.`
+      }, { status: 429 });
+    }
+
+    const pelanggan = db.prepare('SELECT id, nama, email, password_hash FROM pelanggan WHERE email = ?').get(normalizedEmail) as
+      | { id: number; nama: string; email: string; password_hash: string }
+      | undefined;
+
     if (!pelanggan) {
       return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
     }
@@ -35,6 +52,9 @@ export async function POST(request: Request) {
     if (!isMatch) {
       return NextResponse.json({ error: 'Email atau password salah' }, { status: 401 });
     }
+
+    // Login berhasil → reset counter percobaan gagal untuk key ini.
+    clearRateLimit(rateKey);
 
     const tokenPayload = {
       id: pelanggan.id,

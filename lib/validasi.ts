@@ -41,7 +41,7 @@ export const AdminLoginSchema = z.object({
 export const LapanganSchema = z.object({
   nama: z.string().min(1, 'Nama lapangan harus diisi'),
   jenis: z.enum(['futsal', 'badminton'], {
-    errorMap: () => ({ message: 'Jenis harus futsal atau badminton' }),
+    message: 'Jenis harus futsal atau badminton',
   }),
   harga_per_jam: z.number().positive('Harga harus lebih dari 0'),
 });
@@ -52,6 +52,7 @@ export const ReservasiSchema = z.object({
   tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal: YYYY-MM-DD'),
   jam_mulai: z.string().regex(/^\d{2}:\d{2}$/, 'Format jam: HH:MM'),
   jam_selesai: z.string().regex(/^\d{2}:\d{2}$/, 'Format jam: HH:MM'),
+  catatan: z.string().max(255, 'Catatan maksimal 255 karakter').optional(),
 });
 
 // ============================================================
@@ -123,7 +124,7 @@ export function hitungDurasiJam(jamMulai: string, jamSelesai: string): number {
 
 /**
  * Validasi bahwa jam booking berada dalam jam operasional (08:00-23:00).
- * 
+ *
  * @param jamMulai - Format 'HH:MM'
  * @param jamSelesai - Format 'HH:MM'
  * @returns true jika valid, false jika di luar jam operasional
@@ -133,6 +134,30 @@ export function validasiJamOperasional(jamMulai: string, jamSelesai: string): bo
   const [h2, m2] = jamSelesai.split(':').map(Number);
   // Jam operasional: 08:00 - 23:00
   if (h1 < 8 || h2 > 23 || (h2 === 23 && m2 > 0)) return false;
+  return true;
+}
+
+/**
+ * Validasi bahwa jadwal booking bukan di masa lalu.
+ * - Tanggal < hari ini → ditolak.
+ * - Tanggal = hari ini → jam_mulai harus >= waktu sekarang (belum terlewat).
+ *
+ * @param tanggal - Format 'YYYY-MM-DD'
+ * @param jamMulai - Format 'HH:MM'
+ * @returns true jika valid (bukan masa lalu), false jika sudah lewat
+ */
+export function validasiTanggalMasaLalu(tanggal: string, jamMulai: string): boolean {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+
+  if (tanggal < today) return false;
+
+  if (tanggal === today) {
+    const nowTime =
+      `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return jamMulai >= nowTime;
+  }
+
   return true;
 }
 
@@ -148,10 +173,10 @@ interface BuatReservasiParams {
 
 /**
  * Membuat reservasi baru secara ATOMIK (cek bentrok + insert dalam satu transaction).
- * 
- * better-sqlite3 bersifat synchronous, jadi db.transaction() menjamin
- * tidak ada request lain yang bisa nyelip di antara cek dan insert.
- * Ini mencegah race condition yang bisa menyebabkan double booking.
+ *
+ * Memakai BEGIN IMMEDIATE (.immediate()) supaya write lock diambil SEBELUM
+ * cek bentrok. Ini mencegah dua proses/instance yang berbagi file SQLite
+ * (WAL) sama-sama lolos cek lalu double booking.
  * 
  * @param data - Data reservasi baru
  * @returns ID reservasi yang baru dibuat
@@ -159,7 +184,8 @@ interface BuatReservasiParams {
  * @throws Error 'LAPANGAN_TIDAK_DITEMUKAN' jika lapangan tidak ada
  * @throws Error 'DURASI_INVALID' jika durasi tidak valid
  */
-export const buatReservasi = db.transaction((data: BuatReservasiParams) => {
+/** Transaksi reservasi (BEGIN IMMEDIATE saat dipanggil via buatReservasi). */
+const buatReservasiTxn = db.transaction((data: BuatReservasiParams) => {
   // 1. Cek bentrok jadwal
   if (cekBentrok(data)) {
     throw new Error('BENTROK_JADWAL');
@@ -201,3 +227,11 @@ export const buatReservasi = db.transaction((data: BuatReservasiParams) => {
     durasi,
   };
 });
+
+/**
+ * Membuat reservasi dengan BEGIN IMMEDIATE — write lock diambil SEBELUM
+ * cek bentrok, sehingga dua request/proses tidak bisa sama-sama lolos.
+ */
+export function buatReservasi(data: BuatReservasiParams) {
+  return buatReservasiTxn.immediate(data);
+}

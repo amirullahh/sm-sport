@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Runtime artifacts (SQLite db, screenshot test) — bukan source code.
+    "data/**",
   ]),
 ]);
 

@@ -43,3 +43,12 @@ CREATE TABLE reservasi (
 -- Index untuk mencegah query cek-bentrok jadi lambat saat data banyak
 CREATE INDEX idx_reservasi_lapangan_tanggal ON reservasi (lapangan_id, tanggal);
 CREATE INDEX idx_reservasi_pelanggan ON reservasi (pelanggan_id);
+
+-- Pastikan updated_at selalu ter-update setiap kali baris reservasi berubah.
+CREATE TRIGGER trg_reservasi_updated_at
+AFTER UPDATE ON reservasi
+FOR EACH ROW
+BEGIN
+  UPDATE reservasi SET updated_at = datetime('now')
+  WHERE id = OLD.id;
+END;

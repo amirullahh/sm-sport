@@ -33,47 +33,48 @@ export default function AdminDashboard() {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
   useEffect(() => {
-    fetchDashboardData();
+    let active = true;
+    (async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const firstOfMonth = today.substring(0, 8) + '01';
+
+        const [resReservasi, resLapangan, resPelanggan, resLaporan] = await Promise.all([
+          fetch(`/api/reservasi`),
+          fetch(`/api/lapangan`),
+          fetch(`/api/pelanggan`),
+          fetch(`/api/laporan?dari=${firstOfMonth}&sampai=${today}`),
+        ]);
+
+        const reservasiJson = resReservasi.ok ? await resReservasi.json() : { data: [] };
+        const lapanganJson = resLapangan.ok ? await resLapangan.json() : { data: [] };
+        const pelangganJson = resPelanggan.ok ? await resPelanggan.json() : { data: [] };
+        const laporanJson = resLaporan.ok ? await resLaporan.json() : { data: { grand_total: { total_revenue: 0 } } };
+
+        const allReservasi = (reservasiJson.data || []) as ReservasiRow[];
+        const todayReservasi = allReservasi.filter((r) => r.tanggal === today);
+        const lapanganCount = (lapanganJson.data || []).length;
+        const pelangganCount = (pelangganJson.data || []).length;
+        const revenue = laporanJson.data?.grand_total?.total_revenue || 0;
+
+        if (!active) return;
+        setStats([
+          { title: 'Reservasi Hari Ini', value: String(todayReservasi.length), icon: '📊', color: 'text-[#3B82F6]' },
+          { title: 'Revenue Bulan Ini', value: formatRupiah(revenue), icon: '💰', color: 'text-[#10B981]' },
+          { title: 'Lapangan Aktif', value: String(lapanganCount), icon: '🏟️', color: 'text-[#F59E0B]' },
+          { title: 'Total Pelanggan', value: String(pelangganCount), icon: '👥', color: 'text-[#8B5CF6]' },
+        ]);
+
+        // Recent 5 reservasi
+        setRecentReservasi(allReservasi.slice(0, 5));
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
   }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const firstOfMonth = today.substring(0, 8) + '01';
-
-      const [resReservasi, resLapangan, resPelanggan, resLaporan] = await Promise.all([
-        fetch(`/api/reservasi`),
-        fetch(`/api/lapangan`),
-        fetch(`/api/pelanggan`),
-        fetch(`/api/laporan?dari=${firstOfMonth}&sampai=${today}`),
-      ]);
-
-      const reservasiJson = resReservasi.ok ? await resReservasi.json() : { data: [] };
-      const lapanganJson = resLapangan.ok ? await resLapangan.json() : { data: [] };
-      const pelangganJson = resPelanggan.ok ? await resPelanggan.json() : { data: [] };
-      const laporanJson = resLaporan.ok ? await resLaporan.json() : { data: { grand_total: { total_revenue: 0 } } };
-
-      const allReservasi = reservasiJson.data || [];
-      const todayReservasi = allReservasi.filter((r: any) => r.tanggal === today);
-      const lapanganCount = (lapanganJson.data || []).length;
-      const pelangganCount = (pelangganJson.data || []).length;
-      const revenue = laporanJson.data?.grand_total?.total_revenue || 0;
-
-      setStats([
-        { title: 'Reservasi Hari Ini', value: String(todayReservasi.length), icon: '📊', color: 'text-[#3B82F6]' },
-        { title: 'Revenue Bulan Ini', value: formatRupiah(revenue), icon: '💰', color: 'text-[#10B981]' },
-        { title: 'Lapangan Aktif', value: String(lapanganCount), icon: '🏟️', color: 'text-[#F59E0B]' },
-        { title: 'Total Pelanggan', value: String(pelangganCount), icon: '👥', color: 'text-[#8B5CF6]' },
-      ]);
-
-      // Recent 5 reservasi
-      setRecentReservasi(allReservasi.slice(0, 5));
-    } catch (err) {
-      console.error('Dashboard fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getBadgeClass = (status: string) => {
     switch (status) {
